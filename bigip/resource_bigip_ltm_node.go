@@ -53,6 +53,12 @@ func resourceBigipLtmNode() *schema.Resource {
 				Description: "Sets the dynamic ratio number for the node. Used for dynamic ratio load balancing. ",
 				Default:     0,
 			},
+			"ratio": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "Specifies the fixed ratio value used for a node during ratio load balancing.",
+				Default:     1,
+			},
 			"monitor": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -85,6 +91,18 @@ func resourceBigipLtmNode() *schema.Resource {
 							Default:     "3600",
 							Description: "Specifies the amount of time before sending the next DNS query.",
 						},
+						"down_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     5,
+							Description: "Specifies the number of attempts to resolve a domain name.",
+						},
+						"autopopulate": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "disabled",
+							Description: "Specifies whether the node should scale to the IP address set returned by DNS.",
+						},
 					},
 				},
 			},
@@ -100,6 +118,7 @@ func resourceBigipLtmNodeCreate(d *schema.ResourceData, meta interface{}) error 
 	rate_limit := d.Get("rate_limit").(string)
 	connection_limit := d.Get("connection_limit").(int)
 	dynamic_ratio := d.Get("dynamic_ratio").(int)
+	ratio := d.Get("ratio").(int)
 	monitor := d.Get("monitor").(string)
 	state := d.Get("state").(string)
 
@@ -114,6 +133,7 @@ func resourceBigipLtmNodeCreate(d *schema.ResourceData, meta interface{}) error 
 			rate_limit,
 			connection_limit,
 			dynamic_ratio,
+			ratio,
 			monitor,
 			state,
 		)
@@ -122,15 +142,20 @@ func resourceBigipLtmNodeCreate(d *schema.ResourceData, meta interface{}) error 
 		for i := 0; i < ifaceCount; i++ {
 			prefix := fmt.Sprintf("fqdn.%d", i)
 			interval := d.Get(prefix + ".interval").(string)
+			down_interval := d.Get(prefix + ".down_interval").(int)
+			auto_populate := d.Get(prefix + ".auto_populate").(string)
 			err = client.CreateFQDNNode(
 				name,
 				address,
 				rate_limit,
 				connection_limit,
 				dynamic_ratio,
+				ratio,
 				monitor,
 				state,
 				interval,
+				down_interval,
+				auto_populate,
 			)
 		}
 	}
